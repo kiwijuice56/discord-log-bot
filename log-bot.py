@@ -6,7 +6,7 @@ CHANNEL_ID = 000000000000000000
 
 TOKEN = open("token.txt", "r").readline()
 INTENTS = discord.Intents().all()
-bot = commands.Bot(intents=INTENTS)
+bot = commands.Bot(command_prefix='%', intents=INTENTS)
 
 # List of words for the bot to delete
 banned_words = ["tangy"]

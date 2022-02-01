@@ -60,8 +60,9 @@ async def on_message_delete(message):
     embed = discord.Embed(
         title="deletion",
         description=
-        "*{0}*'s message was deleted ```{1}\n{2}```".format(
+        "*{0}*'s message in *#{1}* was deleted```{2}\n{3}```".format(
             str(message.author),
+            str(message.channel),
             message.created_at,
             message.content),
         color=0xff0f67
@@ -79,8 +80,9 @@ async def on_message_edit(before, after):
     logging_channel = bot.get_channel(CHANNEL_ID)
     embed = discord.Embed(
         title="edit",
-        description="*{0}*'s message was edited from ```{1}\n{2}``` to ```{3}\n{4}```".format(
+        description="*{0}*'s message in *#{1}* was edited from \n```{2}\n{3}``` to \n```{4}\n{5}```".format(
             str(before.author),
+            str(before.channel),
             before.created_at,
             before.content,
             after.edited_at,

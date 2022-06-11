@@ -55,10 +55,10 @@ async def on_user_update(before, after):
 
     # Currently only checks if the update is either profile picture or name
     if not str(before) == str(after):
-        embed.description = "username changed from *{0}* to *{1}*".format(str(before), str(after))
+        embed.description = "*{0}* updated their username to *{1}*".format(str(before), str(after))
     elif not after.avatar_url == before.avatar_url:
         embed.set_image(url=after.avatar_url)
-        embed.description = "profile picture updated"
+        embed.description = "*{0}* updated their profile picture".format(str(after))
     await logging_channel.send(embed=embed)
 
 

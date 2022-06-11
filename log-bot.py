@@ -1,21 +1,22 @@
 import discord
 from discord.ext import commands
 
-# Channel for the bot to post logs to
+# Insert the ID of the channel this bot will post logs to
 CHANNEL_ID = 000000000000000000
 
+# Update the TOKEN file with your bot's private token
 TOKEN = open("token.txt", "r").readline()
-INTENTS = discord.Intents().all()
-bot = commands.Bot(command_prefix='%', intents=INTENTS)
+
+# Setup with placeholder prefix and intents to read changes in the server
+bot = commands.Bot(command_prefix='%', intents=discord.Intents().all())
 
 # List of words for the bot to delete
 banned_words = ["tangy"]
 
 
-# Initialization of discord bot and ai
 @bot.event
 async def on_ready() -> None:
-    print("Logged in as {0.user}".format(bot))
+    print("Online as {0.user}".format(bot))
 
 
 @bot.event
@@ -45,12 +46,19 @@ async def on_member_remove(member):
 @bot.event
 async def on_user_update(before, after):
     logging_channel = bot.get_channel(CHANNEL_ID)
+
     embed = discord.Embed(
-        title="new profile",
-        description="*{0}* to *{1}*".format(str(before), str(after)),
+        title="profile update",
         color=0xa061ff
     )
-    embed.set_image(url=after.avatar_url)
+    embed.set_thumbnail(url=before.avatar_url)
+
+    # Currently only checks if the update is either profile picture or name
+    if not str(before) == str(after):
+        embed.description = "username changed from *{0}* to *{1}*".format(str(before), str(after))
+    elif not after.avatar_url == before.avatar_url:
+        embed.set_image(url=after.avatar_url)
+        embed.description = "profile picture updated"
     await logging_channel.send(embed=embed)
 
 
@@ -102,7 +110,7 @@ async def on_message(message):
     contained_banned_words = False
     for word in banned_words:
         if not message.content.lower().find(word) == -1:
-            await message.channel.send("message contained banned word: {0}".format(word))
+            await message.channel.send("message deleted for containing a blocked word")
             contained_banned_words = True
 
     if contained_banned_words:

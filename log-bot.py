@@ -38,7 +38,7 @@ async def on_member_remove(member):
     logging_channel = bot.get_channel(CHANNEL_ID)
     embed = discord.Embed(
         title="member left",
-        description="*{member}*",
+        description=f"*{member}*",
         color=0xff0f0f
     )
     embed.set_author(name=member, icon_url=str(member.avatar_url))

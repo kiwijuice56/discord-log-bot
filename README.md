@@ -13,8 +13,10 @@ Paste it into `token.txt`.
 ### 2. Set the channel ID
 The bot will post logs in any channel specified in the script. To find the ID of the channel you are going to use, 
 open discord in `Developer Mode`, then right-click the channel and select `Copy ID`. 
-Paste this ID inside the script's `CHANNEL_ID` variable.
+Paste this ID inside the `channel.txt` file.
 
 ### 3. Run the `log-bot.py` script
-Ensure that you have the packages at the top of the `log-bot.py` installed. Using any python3 interpreter, run the `log-bot.py` script. When this script is running, your bot should be online and 
+Ensure that you have the packages at the top of the `log-bot.py` installed (namely, `requests` and `discord.py`).
+Using any python3 interpreter, run the `log-bot.py` script.
+When this script is running, your bot should be online and 
 available for use!

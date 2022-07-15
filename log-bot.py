@@ -1,22 +1,23 @@
 import discord
 from discord.ext import commands
 
-# Insert the ID of the channel this bot will post logs to
+import shutil
+import requests
+import os
+
+# Channel for the bot to post logs to
 CHANNEL_ID = 000000000000000000
 
-# Update the TOKEN file with your bot's private token
 TOKEN = open("token.txt", "r").readline()
+bot = commands.Bot(command_prefix="%", intents=discord.Intents().all())
 
-# Setup with placeholder prefix and intents to read changes in the server
-bot = commands.Bot(command_prefix='%', intents=discord.Intents().all())
-
-# List of words for the bot to delete
-banned_words = ["tangy"]
+# Image file extensions that the bot recognizes
+image_types = [".png", ".jpg", ".jpeg"]
 
 
 @bot.event
-async def on_ready() -> None:
-    print("Online as {0.user}".format(bot))
+async def on_ready():
+    print(f"Logged in as {bot.user}")
 
 
 @bot.event
@@ -24,10 +25,11 @@ async def on_member_join(member):
     logging_channel = bot.get_channel(CHANNEL_ID)
     embed = discord.Embed(
         title="member joined",
-        description="*{0}*".format(str(member)),
+        description=f"*{member}*",
         color=0x47ff88
     )
-    embed.set_thumbnail(url=member.avatar_url)
+    embed.set_author(name=member, icon_url=str(member.avatar_url))
+    embed.set_footer(text=f"user ID: {member.id}")
     await logging_channel.send(embed=embed)
 
 
@@ -36,10 +38,11 @@ async def on_member_remove(member):
     logging_channel = bot.get_channel(CHANNEL_ID)
     embed = discord.Embed(
         title="member left",
-        description="*{0}*".format(str(member)),
+        description="*{member}*",
         color=0xff0f0f
     )
-    embed.set_thumbnail(url=member.avatar_url)
+    embed.set_author(name=member, icon_url=str(member.avatar_url))
+    embed.set_footer(text=f"user ID: {member.id}")
     await logging_channel.send(embed=embed)
 
 
@@ -51,33 +54,59 @@ async def on_user_update(before, after):
         title="profile update",
         color=0xa061ff
     )
-    embed.set_thumbnail(url=before.avatar_url)
+    embed.set_author(name=before, icon_url=str(before.avatar_url))
+    embed.set_footer(text=f"user ID: {after.id}")
 
-    # Currently only checks if the update is either profile picture or name
+    # Currently only checks if the change is either profile picture or username
     if not str(before) == str(after):
-        embed.description = "*{0}* updated their username to *{1}*".format(str(before), str(after))
+        embed.description = f"username changed from *{before}* to *{after}*"
+        await logging_channel.send(embed=embed)
     elif not after.avatar_url == before.avatar_url:
-        embed.set_image(url=after.avatar_url)
-        embed.description = "*{0}* updated their profile picture".format(str(after))
-    await logging_channel.send(embed=embed)
+        # Temporarily download image to send as attachment
+        response = requests.get(after.avatar_url, stream=True)
+        with open("img.png", "wb") as out_file:
+            response.raw.decode_content = True
+            shutil.copyfileobj(response.raw, out_file)
+        file = discord.File("img.png")
+        embed.set_image(url=f"attachment://{file.filename}")
+        embed.description = "new avatar: "
+
+        await logging_channel.send(file=file, embed=embed)
+        os.remove("img.png")
 
 
 @bot.event
 async def on_message_delete(message):
     logging_channel = bot.get_channel(CHANNEL_ID)
+
+    # Send main embed
     embed = discord.Embed(
         title="deletion",
-        description=
-        "*{0}*'s message in *#{1}* was deleted```{2}\n{3}```".format(
-            str(message.author),
-            str(message.channel),
-            message.created_at,
-            message.content),
+        description=(
+            f"*#{message.channel}*, {len(message.attachments)} attachment(s)\n"
+            f"```{message.created_at}\n"
+            f"{message.content}```"),
         color=0xff0f67
     )
-    if len(message.attachments) > 0:
-        embed.set_image(url=message.attachments[0])
+    embed.set_author(name=message.author, icon_url=str(message.author.avatar_url))
+    embed.set_footer(text=f"ID: {message.id}")
     await logging_channel.send(embed=embed)
+
+    # Send sub-embeds for attachments
+    for i, attachment in enumerate(message.attachments):
+        file = await attachment.to_file()
+
+        sub_embed = discord.Embed(
+            description=f"attachment {i + 1}",
+            color=0x484848
+        )
+        sub_embed.set_footer(text=f"ID: {message.id}")
+
+        # Use discord's embed image feature if applicable for prettier presentation
+        if True in [file.filename.endswith(ext) for ext in image_types]:
+            sub_embed.set_image(url=f"attachment://{file.filename}")
+
+        await logging_channel.send(file=file, embed=sub_embed)
 
 
 @bot.event
@@ -88,33 +117,18 @@ async def on_message_edit(before, after):
     logging_channel = bot.get_channel(CHANNEL_ID)
     embed = discord.Embed(
         title="edit",
-        description="*{0}*'s message in *#{1}* was edited from \n```{2}\n{3}``` to \n```{4}\n{5}```".format(
-            str(before.author),
-            str(before.channel),
-            before.created_at,
-            before.content,
-            after.edited_at,
-            after.content),
+        description=(
+            f"*#{before.channel}*, {len(after.attachments)} attachment(s)\n"
+            f"before: ```{before.created_at}\n"
+            f"{before.content}``` after:"
+            f"```{after.edited_at}\n"
+            f"{after.content}```"
+        ),
         color=0x4dc1ff
     )
-    if len(after.attachments) > 0:
-        embed.set_image(url=after.attachments[0])
+    embed.set_author(name=after.author, icon_url=str(after.author.avatar_url))
+    embed.set_footer(text=f"ID: {after.id}")
     await logging_channel.send(embed=embed)
-
-
-@bot.event
-async def on_message(message):
-    if message.author == bot.user:
-        return
-
-    contained_banned_words = False
-    for word in banned_words:
-        if not message.content.lower().find(word) == -1:
-            await message.channel.send("message deleted for containing a blocked word")
-            contained_banned_words = True
-
-    if contained_banned_words:
-        await message.delete()
 
 
 bot.run(TOKEN)

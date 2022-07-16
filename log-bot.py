@@ -1,8 +1,11 @@
 import discord
 from discord.ext import commands
+# Required to download image files and delete them
 import shutil
 import requests
 import os
+# Required to search audit logs by date
+import datetime
 
 # IDs for the bot to properly send messages, configured by owner
 id_dir = os.path.dirname(__file__)
@@ -81,23 +84,24 @@ async def on_message_delete(message):
     # Use audit logs to get message deleter
     delete_by = None
     async for del_message in message.guild.audit_logs(action=discord.AuditLogAction.message_delete, limit=1):
+        # Messages deleted by senders do not create an audit log entry, so we must filter out old delete log entries
+        if del_message.created_at < datetime.datetime.utcnow() - datetime.timedelta(seconds=2):
+            break
         delete_by = del_message.user
-    self_delete = delete_by == message.author
 
     embed = discord.Embed(
         title="Message Deleted",
         description=(
             f"*#{message.channel}*, {len(message.attachments)} attachment(s)\n"
-            f"Deleted by {'self' if self_delete else delete_by}\n"
+            f"{'Deleter unknown (likely the sender)' if delete_by is None else f'Deleted by *{delete_by}*'}\n"
             f"```{message.created_at}\n"
             f"{message.content}```"),
         color=0xff0f67
     )
     embed.set_author(name=message.author, icon_url=str(message.author.avatar_url))
-    if self_delete:
-        embed.set_footer(text=f"Deleter/Sender ID: {message.author.id}, Message ID: {message.id}")
-    else:
-        embed.set_footer(text=f"Deleter ID {delete_by.id}, Sender ID: {message.author.id}, Message ID: {message.id}")
+
+    embed.set_footer(text=f"{'' if delete_by is None else f'Deleter ID: {delete_by.id}, '}"
+                          f"Sender ID: {message.author.id}, Message ID: {message.id}")
     await logging_channel.send(embed=embed)
 
     # Send sub-embeds for attachments
@@ -108,10 +112,8 @@ async def on_message_delete(message):
             description=f"Attachment {i + 1}",
             color=0x484848
         )
-        if self_delete:
-            sub_embed.set_footer(text=f"Deleter/Sender ID: {message.author.id}, Message ID: {message.id}")
-        else:
-            sub_embed.set_footer(text=f"Deleter ID {delete_by.id}, Sender ID: {message.author.id}, Message ID: {message.id}")
+        sub_embed.set_footer(text=f"{'' if delete_by is None else f'Deleter ID: {delete_by.id} '}"
+                                  f"Sender ID: {message.author.id}, Message ID: {message.id}")
 
         # Use discord's embed image feature if applicable for prettier presentation
         if True in [file.filename.endswith(ext) for ext in image_types]:

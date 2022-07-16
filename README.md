@@ -20,3 +20,9 @@ Ensure that you have the packages at the top of the `log-bot.py` installed (name
 Using any python3 interpreter, run the `log-bot.py` script.
 When this script is running, your bot should be online and 
 available for use!
+
+## Limitations
+Due to how discord manages audit logs with its API, it is not always possible to determine what user deleted a message.
+The bot will determine that a user deleted a message if an audit log entry appears within two seconds of the deletion.
+Otherwise, the deletion was most likely done by the sender or multiple deletions were made. In both cases, the audit logs
+are not updated.
